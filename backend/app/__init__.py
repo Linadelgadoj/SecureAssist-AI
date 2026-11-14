@@ -1,0 +1,1 @@
+"""SecureAssist AI backend application."""
