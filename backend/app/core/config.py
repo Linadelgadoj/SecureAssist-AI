@@ -20,6 +20,7 @@ class Settings:
     auth_cookie_name: str
     auth_cookie_domain: str | None
     auth_cookie_max_age_seconds: int | None
+    dev_login: bool = False
 
     @property
     def supabase_auth_url(self) -> str:
@@ -98,6 +99,9 @@ def get_settings() -> Settings:
     cookie_secure = _read_bool("AUTH_COOKIE_SECURE", app_env == "production")
     if app_env == "production" and not cookie_secure:
         raise ValueError("AUTH_COOKIE_SECURE debe ser true en producción.")
+    dev_login = _read_bool("DEV_LOGIN", False)
+    if dev_login and app_env != "development":
+        raise ValueError("DEV_LOGIN solo se permite con APP_ENV=development.")
 
     return Settings(
         app_env=app_env,
@@ -111,4 +115,5 @@ def get_settings() -> Settings:
         auth_cookie_name=os.getenv("AUTH_COOKIE_NAME", "secureassist_refresh").strip(),
         auth_cookie_domain=os.getenv("AUTH_COOKIE_DOMAIN", "").strip() or None,
         auth_cookie_max_age_seconds=_read_optional_positive_int("AUTH_COOKIE_MAX_AGE_SECONDS"),
+        dev_login=dev_login,
     )

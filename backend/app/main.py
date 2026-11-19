@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
@@ -9,6 +10,10 @@ from app.api.routes.conversations import router as conversations_router
 from app.api.routes.health import router as health_router
 from app.core.config import Settings, get_settings
 from app.core.errors import install_error_handlers
+from app.repositories.memory_conversations import InMemoryConversationRepository
+from app.services.dev_auth import DevAuthService
+
+logger = logging.getLogger("uvicorn.error")
 
 
 def create_app(settings: Settings | None = None, auth_service=None) -> FastAPI:
@@ -33,6 +38,14 @@ def create_app(settings: Settings | None = None, auth_service=None) -> FastAPI:
     application.state.settings = settings
     application.state.auth_service = auth_service
     application.state.conversation_repository_factory = None
+    if settings.dev_login and auth_service is None:
+        if settings.app_env != "development":
+            raise ValueError("DEV_LOGIN solo se permite con APP_ENV=development.")
+        # Login de prueba local: usuario fijo y conversaciones en memoria, sin Supabase.
+        dev_repository = InMemoryConversationRepository()
+        application.state.auth_service = DevAuthService(settings)
+        application.state.conversation_repository_factory = lambda _token: dev_repository
+        logger.warning("DEV_LOGIN activo: login de prueba sin Supabase. No usar fuera de desarrollo local.")
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

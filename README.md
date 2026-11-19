@@ -61,6 +61,10 @@ La pantalla muestra conectado únicamente tras recibir y validar `status: "ok"` 
 
 `.env.example` contiene valores de ejemplo y no credenciales. Vite solo lee `VITE_API_BASE_URL`; nunca agregues credenciales a variables `VITE_*`.
 
+## Login de prueba local (sin Supabase)
+
+Para probar la interfaz sin credenciales de Google/Supabase, pon `DEV_LOGIN=true` en `.env` (requiere `APP_ENV=development`) y reinicia el backend. El botón **Continuar con Google** entra directamente como `dev@localhost` y las conversaciones se guardan en memoria: se pierden al reiniciar el backend. El backend se niega a arrancar con `DEV_LOGIN=true` fuera de desarrollo. Para usar el login real, vuelve a `DEV_LOGIN=false`.
+
 ## Acceso con Google y Supabase Auth
 
 El acceso implementado usa el Authorization Code Flow con PKCE gestionado por Supabase Auth. FastAPI conserva el verificador temporal, valida el JWT y el correo verificado, devuelve el access token solo a la memoria de la aplicación y mantiene el refresh token en una cookie HttpOnly. El proveedor externo no está configurado por este repositorio; sin credenciales reales de Google/Supabase el flujo no puede completarse en vivo.
