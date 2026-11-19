@@ -2,7 +2,7 @@ import { useBackendHealth } from "../hooks/useBackendHealth";
 import { ConnectionStatus } from "../components/ConnectionStatus";
 import { useAuth } from "../context/AuthContext";
 import { beginGoogleSignIn } from "../services/auth";
-import { ConversationWorkspace } from "./ConversationWorkspace";
+import { AppShell } from "./AppShell";
 import { useEffect, useState } from "react";
 
 export function HomePage() {
@@ -37,7 +37,7 @@ export function HomePage() {
         <span className="topbar-label">ASISTENCIA TÉCNICA</span>
       </header>
 
-      {auth.state === "authenticated" && auth.accessToken ? <ConversationWorkspace accessToken={auth.accessToken} /> : <section className="hero" aria-labelledby="page-title">
+      {auth.state === "authenticated" && auth.accessToken ? <AppShell token={auth.accessToken} onLogout={() => void handleLogout()} /> : <section className="hero" aria-labelledby="page-title">
         <div className="hero-copy">
           <p className="eyebrow"><span className="eyebrow-dot" /> ESTADO DEL SISTEMA</p>
           <h1 id="page-title">Tu soporte técnico,<br /><span>siempre a mano.</span></h1>
@@ -63,6 +63,12 @@ export function HomePage() {
                   try { beginGoogleSignIn(); }
                   catch (error) { setLoginError(error instanceof Error ? error.message : "No se pudo iniciar el acceso."); }
                 }}>Continuar con Google</button>
+                {import.meta.env.DEV && (
+                  // Solo en desarrollo: el login de prueba del backend admite un segundo usuario técnico.
+                  <button className="auth-secondary" type="button" onClick={() => beginGoogleSignIn("tecnico@localhost")}>
+                    Entrar como técnico (prueba local)
+                  </button>
+                )}
               </div>
             )}
             {auth.state === "authenticated" && auth.user && (

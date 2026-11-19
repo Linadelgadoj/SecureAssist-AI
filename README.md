@@ -80,9 +80,21 @@ El contenedor crea también la base `secureassist_test`; con `TEST_DATABASE_URL`
 
 Un administrador cambia roles o desactiva usuarios con `PATCH /api/v1/users/{id}`; siempre debe quedar al menos un administrador activo.
 
+## Inventario para reparaciones
+
+Requiere la base de datos local (sin `DATABASE_URL` sus rutas responden 503). En la aplicación aparecen las secciones **Inventario**, **Clientes**, **Reparaciones** y, para administradores, **Usuarios**.
+
+- **Inventario:** productos con existencias por ubicación (bodegas y vehículos), alerta de bajo stock y últimos movimientos. El administrador crea productos y ubicaciones y registra entradas, salidas, ajustes por conteo físico y traslados.
+- **Clientes:** clientes y equipos instalados (marca, modelo, serial, ubicación en el sitio) con el historial de reparaciones de cada equipo.
+- **Reparaciones:** el técnico abre una reparación, registra diagnóstico y solución, y agrega los repuestos usados, que se descuentan del stock. Al resolverla, el equipo vuelve a «Operativo».
+
+Toda salida de stock se valida en la base de datos dentro de una transacción: dos técnicos no pueden consumir la misma última unidad. Cada cambio de existencia queda en `stock_movements` con su autor.
+
+La API completa está documentada en `http://localhost:8000/docs` (etiqueta *inventory*).
+
 ## Login de prueba local (sin Supabase)
 
-Para probar la interfaz sin credenciales de Google/Supabase, pon `DEV_LOGIN=true` en `.env` (requiere `APP_ENV=development`) y reinicia el backend. El botón **Continuar con Google** entra directamente como `dev@localhost` (para entrar como técnico: `/api/v1/auth/google/start?login_hint=tecnico@localhost`) y, sin `DATABASE_URL`, las conversaciones se guardan en memoria y se pierden al reiniciar el backend. El backend se niega a arrancar con `DEV_LOGIN=true` fuera de desarrollo. Para usar el login real, vuelve a `DEV_LOGIN=false`.
+Para probar la interfaz sin credenciales de Google/Supabase, pon `DEV_LOGIN=true` en `.env` (requiere `APP_ENV=development`) y reinicia el backend. El botón **Continuar con Google** entra directamente como `dev@localhost` (en desarrollo, el botón **Entrar como técnico (prueba local)** usa `tecnico@localhost`) y, sin `DATABASE_URL`, las conversaciones se guardan en memoria y se pierden al reiniciar el backend. El backend se niega a arrancar con `DEV_LOGIN=true` fuera de desarrollo. Para usar el login real, vuelve a `DEV_LOGIN=false`.
 
 ## Acceso con Google y Supabase Auth
 
