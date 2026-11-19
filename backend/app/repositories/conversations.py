@@ -5,13 +5,14 @@ from typing import Any
 import httpx
 
 from app.core.config import Settings
+from app.domain.errors import StorageError, StorageUnavailable
 
 
-class ConversationStoreError(Exception):
+class ConversationStoreError(StorageError):
     pass
 
 
-class ConversationStoreUnavailable(ConversationStoreError):
+class ConversationStoreUnavailable(ConversationStoreError, StorageUnavailable):
     pass
 
 

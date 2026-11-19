@@ -6,9 +6,11 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.core.config import Settings
+from app.dependencies.services import get_auth_provider
+from app.domain.ports import AuthProvider
 from app.repositories.oauth_transactions import OAuthTransactionError
 from app.schemas.auth import SessionResponse
-from app.services.auth_service import AuthRejected, AuthService, AuthUnavailable
+from app.services.auth_service import AuthRejected, AuthUnavailable
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 STATE_COOKIE = "secureassist_oauth_state"
@@ -18,10 +20,8 @@ def _settings(request: Request) -> Settings:
     return request.app.state.settings
 
 
-def _service(request: Request) -> AuthService:
-    if request.app.state.auth_service is None:
-        request.app.state.auth_service = AuthService(_settings(request))
-    return request.app.state.auth_service
+def _service(request: Request) -> AuthProvider:
+    return get_auth_provider(request)
 
 
 def _set_refresh_cookie(response: Response, settings: Settings, token: str) -> None:
@@ -35,6 +35,19 @@ def _set_refresh_cookie(response: Response, settings: Settings, token: str) -> N
 def _clear_cookie(response: Response, settings: Settings) -> None:
     response.delete_cookie(settings.auth_cookie_name, path="/api/v1/auth", domain=settings.auth_cookie_domain,
                            secure=settings.auth_cookie_secure, httponly=True, samesite="lax")
+
+
+def _clear_state_cookie(response: Response, settings: Settings) -> None:
+    response.delete_cookie(STATE_COOKIE, path="/api/v1/auth/google/callback", secure=settings.auth_cookie_secure,
+                           httponly=True, samesite="lax")
+
+
+def _auth_failed_redirect(settings: Settings) -> RedirectResponse:
+    response = RedirectResponse(
+        f"{settings.frontend_auth_success_url}?{urlencode({'auth_error': 'authentication_failed'})}", status_code=303
+    )
+    _clear_state_cookie(response, settings)
+    return response
 
 
 def _session_error(request: Request, settings: Settings, status: int, code: str, message: str) -> JSONResponse:
@@ -72,21 +85,17 @@ async def google_callback(request: Request, code: str | None = None, state: str 
                 service.consume_state(state, request.cookies.get(STATE_COOKIE))
             except (OAuthTransactionError, AuthRejected):
                 pass
-        response = RedirectResponse(f"{settings.frontend_auth_success_url}?{urlencode({'auth_error': 'authentication_failed'})}", status_code=303)
-        response.delete_cookie(STATE_COOKIE, path="/api/v1/auth/google/callback", secure=settings.auth_cookie_secure, httponly=True, samesite="lax")
-        return response
+        return _auth_failed_redirect(settings)
     try:
         transaction = service.consume_state(state, request.cookies.get(STATE_COOKIE))
         access, refresh, user, expires = await service.exchange_and_validate(code, transaction.code_verifier)
     except (OAuthTransactionError, AuthRejected):
-        response = RedirectResponse(f"{settings.frontend_auth_success_url}?{urlencode({'auth_error': 'authentication_failed'})}", status_code=303)
-        response.delete_cookie(STATE_COOKIE, path="/api/v1/auth/google/callback", secure=settings.auth_cookie_secure, httponly=True, samesite="lax")
-        return response
+        return _auth_failed_redirect(settings)
     except AuthUnavailable:
         raise HTTPException(503, "Authentication provider is temporarily unavailable")
     response = RedirectResponse(settings.frontend_auth_success_url, status_code=303)
     _set_refresh_cookie(response, settings, refresh)
-    response.delete_cookie(STATE_COOKIE, path="/api/v1/auth/google/callback", secure=settings.auth_cookie_secure, httponly=True, samesite="lax")
+    _clear_state_cookie(response, settings)
     return response
 
 

@@ -10,6 +10,7 @@ from app.api.routes.conversations import router as conversations_router
 from app.api.routes.health import router as health_router
 from app.core.config import Settings, get_settings
 from app.core.errors import install_error_handlers
+from app.repositories.conversations import SupabaseConversationRepository
 from app.repositories.memory_conversations import InMemoryConversationRepository
 from app.services.dev_auth import DevAuthService
 
@@ -22,10 +23,9 @@ def create_app(settings: Settings | None = None, auth_service=None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         yield
-        service = application.state.auth_service
-        provider_client = getattr(getattr(service, "client", None), "client", None)
-        if provider_client is not None:
-            await provider_client.aclose()
+        close = getattr(application.state.auth_service, "aclose", None)
+        if close is not None:
+            await close()
 
     application = FastAPI(
         title="SecureAssist AI API",
@@ -37,7 +37,10 @@ def create_app(settings: Settings | None = None, auth_service=None) -> FastAPI:
     )
     application.state.settings = settings
     application.state.auth_service = auth_service
-    application.state.conversation_repository_factory = None
+    # Raíz de composición: aquí se eligen los adaptadores concretos de cada puerto.
+    application.state.conversation_repository_factory = (
+        lambda token: SupabaseConversationRepository(settings, token)
+    )
     if settings.dev_login and auth_service is None:
         if settings.app_env != "development":
             raise ValueError("DEV_LOGIN solo se permite con APP_ENV=development.")

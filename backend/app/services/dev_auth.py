@@ -68,6 +68,9 @@ class DevAuthService:
         if refresh_token:
             self._refresh.discard(refresh_token)
 
+    async def aclose(self) -> None:
+        return None
+
     def _issue(self) -> tuple[str, str, AuthUser, int]:
         access, refresh = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
         self._access.add(access)
