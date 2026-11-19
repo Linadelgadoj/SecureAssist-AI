@@ -63,3 +63,84 @@ class AuthProvider(Protocol):
     async def logout(self, refresh_token: str | None) -> None: ...
 
     async def aclose(self) -> None: ...
+
+
+# ---------------------------------------------------------------------------
+# Inventario. Tres puertos pequeños en lugar de uno grande (segregación de
+# interfaces): catálogo y existencias, clientes y equipos, reparaciones.
+# Los datos de entrada son dicts ya validados por los esquemas de la API.
+# ---------------------------------------------------------------------------
+
+
+class CatalogRepository(Protocol):
+    async def list_products(self, *, query: str | None, category: str | None,
+                            include_inactive: bool, low_stock_only: bool) -> list[Row]: ...
+
+    async def get_product(self, product_id: str) -> Row | None: ...
+
+    async def create_product(self, data: Row) -> Row: ...
+
+    async def update_product(self, product_id: str, data: Row) -> Row | None: ...
+
+    async def list_locations(self, include_inactive: bool) -> list[Row]: ...
+
+    async def create_location(self, data: Row) -> Row: ...
+
+    async def update_location(self, location_id: str, data: Row) -> Row | None: ...
+
+    async def record_movement(self, *, product_id: str, location_id: str, delta: int, reason: str,
+                              actor_id: str, note: str | None) -> Row:
+        """Registra el movimiento y actualiza la existencia en una sola transacción.
+        ConflictError("INSUFFICIENT_STOCK") si la existencia quedaría negativa."""
+        ...
+
+    async def adjust_to(self, *, product_id: str, location_id: str, counted: int,
+                        actor_id: str, note: str | None) -> Row: ...
+
+    async def transfer(self, *, product_id: str, from_location_id: str, to_location_id: str,
+                       quantity: int, actor_id: str, note: str | None) -> list[Row]: ...
+
+    async def list_movements(self, *, product_id: str | None, limit: int) -> list[Row]: ...
+
+
+class ClientRepository(Protocol):
+    async def list_clients(self, *, query: str | None, limit: int, offset: int) -> list[Row]: ...
+
+    async def get_client(self, client_id: str) -> Row | None:
+        """Cliente con sus equipos instalados."""
+        ...
+
+    async def create_client(self, data: Row, actor_id: str) -> Row: ...
+
+    async def update_client(self, client_id: str, data: Row) -> Row | None: ...
+
+    async def create_equipment(self, client_id: str, data: Row, actor_id: str) -> Row: ...
+
+    async def update_equipment(self, equipment_id: str, data: Row) -> Row | None: ...
+
+    async def get_equipment(self, equipment_id: str) -> Row | None:
+        """Equipo con su historial de reparaciones."""
+        ...
+
+
+class RepairRepository(Protocol):
+    async def list_repairs(self, *, status: str | None, client_id: str | None, equipment_id: str | None,
+                           technician_id: str | None, limit: int, offset: int) -> list[Row]: ...
+
+    async def get_repair(self, repair_id: str) -> Row | None:
+        """Reparación con los repuestos usados."""
+        ...
+
+    async def create_repair(self, data: Row, technician_id: str) -> Row:
+        """Valida que el equipo sea del cliente y la conversación del técnico;
+        marca el equipo como en reparación."""
+        ...
+
+    async def update_repair(self, repair_id: str, data: Row) -> Row:
+        """ConflictError("REPAIR_CLOSED") si ya estaba cerrada."""
+        ...
+
+    async def add_part(self, *, repair_id: str, product_id: str, location_id: str,
+                       quantity: int, actor_id: str, note: str | None) -> Row:
+        """Descuenta el repuesto del stock enlazado a la reparación."""
+        ...

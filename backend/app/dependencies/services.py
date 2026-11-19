@@ -10,7 +10,9 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.application.conversations import ConversationService
+from app.application.inventory import CatalogService, ClientService, RepairService
 from app.application.users import UserService
+from app.domain.errors import StorageUnavailable
 from app.domain.ports import AuthProvider
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -49,3 +51,23 @@ def get_conversation_service(
 def get_user_service(request: Request) -> UserService:
     state = request.app.state
     return UserService(state.user_repository, state.settings.admin_emails)
+
+
+def _inventory_repository(request: Request, name: str):
+    """El inventario solo funciona con PostgreSQL (DATABASE_URL)."""
+    repository = getattr(request.app.state, name, None)
+    if repository is None:
+        raise StorageUnavailable("Inventory requires DATABASE_URL")
+    return repository
+
+
+def get_catalog_service(request: Request) -> CatalogService:
+    return CatalogService(_inventory_repository(request, "catalog_repository"))
+
+
+def get_client_service(request: Request) -> ClientService:
+    return ClientService(_inventory_repository(request, "client_repository"))
+
+
+def get_repair_service(request: Request) -> RepairService:
+    return RepairService(_inventory_repository(request, "repair_repository"))

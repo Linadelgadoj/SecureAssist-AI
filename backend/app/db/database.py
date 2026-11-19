@@ -6,6 +6,7 @@ en orden, cada una en su propia transacción, y quedan registradas en
 """
 from __future__ import annotations
 
+import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncIterator
@@ -15,6 +16,12 @@ import asyncpg
 from app.domain.errors import StorageError, StorageUnavailable
 
 MIGRATIONS_DIR = Path(__file__).resolve().parents[2] / "migrations" / "postgres"
+
+
+async def _init_connection(connection: asyncpg.Connection) -> None:
+    # Devuelve json/jsonb como objetos de Python en lugar de texto.
+    for type_name in ("json", "jsonb"):
+        await connection.set_type_codec(type_name, encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
 
 
 class Database:
@@ -27,7 +34,8 @@ class Database:
     async def connect(self) -> None:
         if self._pool is None:
             self._pool = await asyncpg.create_pool(
-                self._url, min_size=self._min_size, max_size=self._max_size, command_timeout=10
+                self._url, min_size=self._min_size, max_size=self._max_size, command_timeout=10,
+                init=_init_connection,
             )
 
     async def close(self) -> None:

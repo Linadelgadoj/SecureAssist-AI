@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.auth import router as auth_router
 from app.api.routes.conversations import router as conversations_router
 from app.api.routes.health import router as health_router
+from app.api.routes.inventory import router as inventory_router
 from app.api.routes.users import router as users_router
 from app.core.config import Settings, get_settings
 from app.core.errors import install_error_handlers
@@ -16,6 +17,11 @@ from app.repositories.conversations import SupabaseConversationRepository
 from app.repositories.memory_conversations import InMemoryConversationRepository
 from app.repositories.memory_users import InMemoryUserRepository
 from app.repositories.postgres_conversations import PostgresConversationRepository
+from app.repositories.postgres_inventory import (
+    PostgresCatalogRepository,
+    PostgresClientRepository,
+    PostgresRepairRepository,
+)
 from app.repositories.postgres_users import PostgresUserRepository
 from app.services.dev_auth import DevAuthService
 
@@ -28,12 +34,20 @@ def _compose_storage(application: FastAPI, settings: Settings) -> Database | Non
     1. DATABASE_URL definido  -> PostgreSQL local (docker-compose).
     2. DEV_LOGIN sin base      -> memoria (se pierde al reiniciar).
     3. En otro caso            -> Supabase (PostgREST + RLS) para conversaciones.
+
+    El inventario solo existe con PostgreSQL; sin él sus rutas responden 503.
     """
+    application.state.catalog_repository = None
+    application.state.client_repository = None
+    application.state.repair_repository = None
     if settings.database_url:
         database = Database(settings.database_url)
         conversations = PostgresConversationRepository(database)
         application.state.conversation_repository_factory = lambda _token: conversations
         application.state.user_repository = PostgresUserRepository(database)
+        application.state.catalog_repository = PostgresCatalogRepository(database)
+        application.state.client_repository = PostgresClientRepository(database)
+        application.state.repair_repository = PostgresRepairRepository(database)
         return database
     application.state.user_repository = InMemoryUserRepository()
     if settings.dev_login:
@@ -104,6 +118,7 @@ def create_app(settings: Settings | None = None, auth_service=None) -> FastAPI:
     application.include_router(auth_router, prefix="/api/v1")
     application.include_router(users_router, prefix="/api/v1")
     application.include_router(conversations_router, prefix="/api/v1")
+    application.include_router(inventory_router, prefix="/api/v1")
     return application
 
 
