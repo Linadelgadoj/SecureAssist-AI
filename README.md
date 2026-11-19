@@ -61,9 +61,28 @@ La pantalla muestra conectado únicamente tras recibir y validar `status: "ok"` 
 
 `.env.example` contiene valores de ejemplo y no credenciales. Vite solo lee `VITE_API_BASE_URL`; nunca agregues credenciales a variables `VITE_*`.
 
+## Base de datos local (PostgreSQL en Docker)
+
+Requiere Docker Desktop. Desde la raíz, con `POSTGRES_PASSWORD` y `DATABASE_URL` definidos en `.env` (ver `.env.example`):
+
+```powershell
+docker compose up -d db
+```
+
+El backend aplica las migraciones de `backend\migrations\postgres` al arrancar (también se pueden aplicar con `python -m app.db.migrate` desde `backend`). Si `DATABASE_URL` está vacío, se usa Supabase o, con `DEV_LOGIN=true`, memoria. Usa `127.0.0.1` y no `localhost` en la URL: en Windows `localhost` prueba primero IPv6 y cada conexión tarda segundos.
+
+El contenedor crea también la base `secureassist_test`; con `TEST_DATABASE_URL` definido, `pytest` ejecuta además las pruebas contra PostgreSQL (si no, las omite).
+
+### Roles
+
+- **Administrador:** gestiona catálogo, existencias, ubicaciones y usuarios. Los correos de `ADMIN_EMAILS` siempre son administradores.
+- **Técnico:** rol por defecto al entrar por primera vez. Consulta disponibilidad, clientes, equipos e historial de reparaciones y registra reparaciones.
+
+Un administrador cambia roles o desactiva usuarios con `PATCH /api/v1/users/{id}`; siempre debe quedar al menos un administrador activo.
+
 ## Login de prueba local (sin Supabase)
 
-Para probar la interfaz sin credenciales de Google/Supabase, pon `DEV_LOGIN=true` en `.env` (requiere `APP_ENV=development`) y reinicia el backend. El botón **Continuar con Google** entra directamente como `dev@localhost` y las conversaciones se guardan en memoria: se pierden al reiniciar el backend. El backend se niega a arrancar con `DEV_LOGIN=true` fuera de desarrollo. Para usar el login real, vuelve a `DEV_LOGIN=false`.
+Para probar la interfaz sin credenciales de Google/Supabase, pon `DEV_LOGIN=true` en `.env` (requiere `APP_ENV=development`) y reinicia el backend. El botón **Continuar con Google** entra directamente como `dev@localhost` (para entrar como técnico: `/api/v1/auth/google/start?login_hint=tecnico@localhost`) y, sin `DATABASE_URL`, las conversaciones se guardan en memoria y se pierden al reiniciar el backend. El backend se niega a arrancar con `DEV_LOGIN=true` fuera de desarrollo. Para usar el login real, vuelve a `DEV_LOGIN=false`.
 
 ## Acceso con Google y Supabase Auth
 

@@ -21,6 +21,11 @@ class Settings:
     auth_cookie_domain: str | None
     auth_cookie_max_age_seconds: int | None
     dev_login: bool = False
+    # PostgreSQL local (docker-compose). Si está vacío se usa Supabase o, con
+    # DEV_LOGIN, almacenamiento en memoria.
+    database_url: str = ""
+    # Correos que siempre tienen rol administrador (se aplica en cada inicio de sesión).
+    admin_emails: frozenset[str] = frozenset()
 
     @property
     def supabase_auth_url(self) -> str:
@@ -116,4 +121,8 @@ def get_settings() -> Settings:
         auth_cookie_domain=os.getenv("AUTH_COOKIE_DOMAIN", "").strip() or None,
         auth_cookie_max_age_seconds=_read_optional_positive_int("AUTH_COOKIE_MAX_AGE_SECONDS"),
         dev_login=dev_login,
+        database_url=os.getenv("DATABASE_URL", "").strip(),
+        admin_emails=frozenset(
+            email.strip().lower() for email in os.getenv("ADMIN_EMAILS", "").split(",") if email.strip()
+        ),
     )

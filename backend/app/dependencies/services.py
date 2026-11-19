@@ -10,6 +10,7 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.application.conversations import ConversationService
+from app.application.users import UserService
 from app.domain.ports import AuthProvider
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -43,3 +44,8 @@ def get_conversation_service(
     token = credentials.credentials if credentials else ""
     repository = request.app.state.conversation_repository_factory(token)
     return ConversationService(repository)
+
+
+def get_user_service(request: Request) -> UserService:
+    state = request.app.state
+    return UserService(state.user_repository, state.settings.admin_emails)

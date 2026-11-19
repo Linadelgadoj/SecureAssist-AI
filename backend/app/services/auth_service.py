@@ -48,7 +48,8 @@ class AuthService:
         self.transactions = transactions or OAuthTransactionStore()
         self.verifier = verifier or SupabaseJWTVerifier(settings.supabase_jwks_url, settings.supabase_jwt_issuer)
 
-    def start(self) -> tuple[str, str]:
+    def start(self, login_hint: str | None = None) -> tuple[str, str]:
+        # login_hint solo lo usa el login de prueba; Supabase/Google lo ignoran aquí.
         self.settings.require_auth_configuration()
         verifier = secrets.token_urlsafe(64)
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()

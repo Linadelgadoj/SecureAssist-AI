@@ -23,7 +23,7 @@ class FakeAuthService:
             return type("Transaction", (), {"code_verifier": "test-verifier"})()
     transactions = Transactions()
 
-    def start(self):
+    def start(self, login_hint=None):
         return "state123", "https://sample.supabase.co/auth/v1/authorize?provider=google"
 
     def consume_state(self, state, cookie):

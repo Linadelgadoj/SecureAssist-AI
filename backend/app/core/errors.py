@@ -5,7 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.domain.errors import NotFoundError, StorageError, StorageUnavailable
+from app.domain.errors import ConflictError, ForbiddenError, NotFoundError, StorageError, StorageUnavailable
 
 CODE_BY_STATUS = {
     400: "INVALID_REQUEST",
@@ -37,7 +37,7 @@ MESSAGE_BY_STATUS = {
 }
 # Errores de dominio -> estado HTTP. La búsqueda sigue el MRO, así que
 # StorageUnavailable (503) gana sobre su clase base StorageError (500).
-STATUS_BY_DOMAIN_ERROR = {NotFoundError: 404, StorageUnavailable: 503, StorageError: 500}
+STATUS_BY_DOMAIN_ERROR = {NotFoundError: 404, ForbiddenError: 403, StorageUnavailable: 503, StorageError: 500}
 
 
 def _error_response(
@@ -96,6 +96,11 @@ def install_error_handlers(app: FastAPI) -> None:
 
     for error_type, status in STATUS_BY_DOMAIN_ERROR.items():
         app.add_exception_handler(error_type, _domain_handler(status))
+
+    @app.exception_handler(ConflictError)
+    async def conflict_error(request: Request, exc: ConflictError) -> JSONResponse:
+        # El mensaje de un conflicto es de negocio y está pensado para mostrarse al usuario.
+        return _error_response(request, 409, exc.code, exc.message)
 
     @app.exception_handler(Exception)
     async def unexpected_error(request: Request, _exc: Exception) -> JSONResponse:

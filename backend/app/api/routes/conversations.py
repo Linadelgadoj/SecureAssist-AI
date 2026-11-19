@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Query
 
 from app.api.pagination import decode_cursor, encode_next_cursor
 from app.application.conversations import ConversationService
-from app.dependencies.auth import get_current_user_id
+from app.dependencies.auth import get_current_account_id
 from app.dependencies.services import get_conversation_service
 from app.schemas.conversations import (
     ConversationCreate,
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/conversations", tags=["conversations"])
 @router.post("", response_model=ConversationSummary, status_code=201)
 async def create_conversation(
     payload: ConversationCreate | None = None,
-    owner: str = Depends(get_current_user_id),
+    owner: str = Depends(get_current_account_id),
     service: ConversationService = Depends(get_conversation_service),
 ):
     row = await service.start_conversation(owner, payload.title if payload else None)
@@ -37,7 +37,7 @@ async def create_conversation(
 async def list_conversations(
     limit: int = Query(default=20, ge=1, le=100),
     cursor: str | None = Query(default=None, max_length=32),
-    owner: str = Depends(get_current_user_id),
+    owner: str = Depends(get_current_account_id),
     service: ConversationService = Depends(get_conversation_service),
 ):
     offset = decode_cursor(cursor)
@@ -51,7 +51,7 @@ async def list_conversations(
 @router.get("/{conversation_id}", response_model=ConversationSummary)
 async def get_conversation(
     conversation_id: UUID,
-    owner: str = Depends(get_current_user_id),
+    owner: str = Depends(get_current_account_id),
     service: ConversationService = Depends(get_conversation_service),
 ):
     return ConversationSummary.model_validate(await service.get_conversation(owner, str(conversation_id)))
@@ -62,7 +62,7 @@ async def list_messages(
     conversation_id: UUID,
     limit: int = Query(default=100, ge=1, le=100),
     cursor: str | None = Query(default=None, max_length=32),
-    owner: str = Depends(get_current_user_id),
+    owner: str = Depends(get_current_account_id),
     service: ConversationService = Depends(get_conversation_service),
 ):
     offset = decode_cursor(cursor)
@@ -77,7 +77,7 @@ async def list_messages(
 async def create_message(
     conversation_id: UUID,
     payload: MessageCreate,
-    owner: str = Depends(get_current_user_id),
+    owner: str = Depends(get_current_account_id),
     service: ConversationService = Depends(get_conversation_service),
 ):
     row = await service.send_message(owner, str(conversation_id), payload.content_text)

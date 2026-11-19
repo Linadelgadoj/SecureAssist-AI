@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.core.config import Settings
@@ -64,9 +64,9 @@ def _require_origin(request: Request, settings: Settings) -> None:
 
 
 @router.get("/google/start")
-async def google_start(request: Request):
+async def google_start(request: Request, login_hint: str | None = Query(default=None, max_length=320)):
     try:
-        state, url = _service(request).start()
+        state, url = _service(request).start(login_hint)
     except (ValueError, OAuthTransactionError):
         raise HTTPException(503, "Authentication is not configured")
     response = RedirectResponse(url, status_code=302)
