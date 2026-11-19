@@ -2,6 +2,57 @@
 
 Aplicación web en desarrollo para asistencia técnica a instaladores de sistemas de seguridad electrónica. Incluye historial de conversaciones con un asistente técnico (modelo local con Ollama), inventario para reparaciones (existencias por ubicación, clientes, equipos instalados y reparaciones) y roles de administrador y técnico. El diseño de estas partes y las decisiones tomadas están en `docs/architecture/inventario-y-asistente.md`.
 
+## Inicio rápido (desarrollo local en Windows)
+
+Necesitas tener instalados **Python 3.10+**, **Node.js 18+**, **Docker Desktop** (en ejecución) y **[Ollama](https://ollama.com/download)**. Ejecuta los comandos en PowerShell, desde la carpeta del proyecto.
+
+```powershell
+# 1. Configuración: crea .env y frontend\.env.local listos para desarrollo
+python scripts\crear_env_desarrollo.py
+
+# 2. Base de datos PostgreSQL en Docker
+docker compose up -d db
+
+# 3. Backend: entorno virtual y dependencias
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r backend\requirements.txt
+
+# 4. Modelo del asistente (descarga de varios GB, solo la primera vez)
+ollama pull qwen3.5
+
+# 5. Datos de demostración (productos, clientes y reparaciones de ejemplo)
+cd backend; python -m app.db.seed_demo; cd ..
+
+# 6. Iniciar el backend (deja esta terminal abierta)
+uvicorn app.main:app --app-dir backend --env-file .env --reload --host localhost --port 8000
+```
+
+En **otra terminal**:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Abre `http://localhost:5173`:
+
+- **Continuar con Google** entra como administrador (`dev@localhost`).
+- **Entrar como técnico (prueba local)** entra como técnico (`tecnico@localhost`).
+
+Si algo falla:
+
+- **«El asistente está desactivado»:** en `.env` debe decir `LLM_PROVIDER=ollama`. Reinicia el backend después de cambiarlo.
+- **«No se pudo conectar con el modelo local (Ollama)»:** abre la aplicación Ollama o ejecuta `ollama serve`.
+- **Entras pero no ves las opciones de administrador:** en `.env` debe decir `ADMIN_EMAILS=dev@localhost`.
+- **El inventario responde «no está disponible»:** comprueba que Docker Desktop esté abierto y que `docker compose ps` muestre `db` como `healthy`.
+- **Docker no arranca («Virtual Machine Platform is not enabled»):** activa la característica de Windows *Plataforma de máquina virtual* y reinicia el equipo.
+- **PowerShell no deja activar el entorno virtual:** ejecuta `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` en esa terminal.
+- **El asistente tarda mucho:** el modelo corre en tu equipo. Sin una tarjeta gráfica dedicada puede tardar decenas de segundos por respuesta.
+
+Las secciones siguientes explican cada parte con más detalle.
+
 ## Requisitos locales
 
 - Windows 10/11 y PowerShell.
