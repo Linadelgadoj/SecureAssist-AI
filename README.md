@@ -1,6 +1,6 @@
 # SecureAssist AI
 
-Aplicación web en desarrollo para asistencia técnica a instaladores de sistemas de seguridad electrónica. Esta entrega contiene una pantalla mínima de estado y un backend FastAPI con `/api/v1/health`; incluye además inventario para reparaciones y un asistente con modelo local (ver secciones abajo).
+Aplicación web en desarrollo para asistencia técnica a instaladores de sistemas de seguridad electrónica. Incluye historial de conversaciones con un asistente técnico (modelo local con Ollama), inventario para reparaciones (existencias por ubicación, clientes, equipos instalados y reparaciones) y roles de administrador y técnico. El diseño de estas partes y las decisiones tomadas están en `docs/architecture/inventario-y-asistente.md`.
 
 ## Requisitos locales
 
