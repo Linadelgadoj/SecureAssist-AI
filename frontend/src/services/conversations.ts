@@ -68,3 +68,11 @@ export function sendMessage(token: string, conversationId: string, contentText: 
     body: JSON.stringify({ content_text: contentText }),
   });
 }
+
+/** Pide al asistente que responda el último mensaje. El modelo local puede tardar. */
+export function requestReply(token: string, conversationId: string): Promise<ConversationMessage> {
+  return request<ConversationMessage>(`/conversations/${encodeURIComponent(conversationId)}/reply`, token, {
+    method: "POST",
+    signal: AbortSignal.timeout(200000),
+  });
+}

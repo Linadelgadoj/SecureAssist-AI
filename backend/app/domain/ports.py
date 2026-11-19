@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
+from app.domain.assistant import ChatTurn, ModelReply, ToolSpec
 from app.domain.users import AppUser, Role
 from app.schemas.auth import AuthUser
 
@@ -26,6 +27,10 @@ class ConversationRepository(Protocol):
     async def list_messages(self, owner_user_id: str, conversation_id: str, limit: int, offset: int) -> list[Row]: ...
 
     async def create_message(self, owner_user_id: str, conversation_id: str, content_text: str) -> Row: ...
+
+    async def create_assistant_message(self, owner_user_id: str, conversation_id: str, content_text: str) -> Row:
+        """Guarda una respuesta del asistente (role='assistant', processing_state='completed')."""
+        ...
 
 
 class UserRepository(Protocol):
@@ -122,6 +127,10 @@ class ClientRepository(Protocol):
         """Equipo con su historial de reparaciones."""
         ...
 
+    async def search_equipment(self, query: str, limit: int) -> list[Row]:
+        """Equipos cuyo serial, marca, modelo, tipo o cliente coincide con el texto."""
+        ...
+
 
 class RepairRepository(Protocol):
     async def list_repairs(self, *, status: str | None, client_id: str | None, equipment_id: str | None,
@@ -144,3 +153,13 @@ class RepairRepository(Protocol):
                        quantity: int, actor_id: str, note: str | None) -> Row:
         """Descuenta el repuesto del stock enlazado a la reparación."""
         ...
+
+
+class LanguageModel(Protocol):
+    """Proveedor de IA (Ollama hoy; OpenAI u otro mañana) detrás de una interfaz mínima."""
+
+    async def chat(self, turns: list[ChatTurn], tools: list[ToolSpec]) -> ModelReply:
+        """Devuelve texto o peticiones de herramientas. AssistantUnavailable si falla."""
+        ...
+
+    async def aclose(self) -> None: ...

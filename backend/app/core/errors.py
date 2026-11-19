@@ -5,6 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.domain.assistant import AssistantUnavailable
 from app.domain.errors import ConflictError, ForbiddenError, NotFoundError, StorageError, StorageUnavailable
 
 CODE_BY_STATUS = {
@@ -96,6 +97,10 @@ def install_error_handlers(app: FastAPI) -> None:
 
     for error_type, status in STATUS_BY_DOMAIN_ERROR.items():
         app.add_exception_handler(error_type, _domain_handler(status))
+
+    @app.exception_handler(AssistantUnavailable)
+    async def assistant_unavailable(request: Request, exc: AssistantUnavailable) -> JSONResponse:
+        return _error_response(request, 503, "ASSISTANT_UNAVAILABLE", exc.message)
 
     @app.exception_handler(ConflictError)
     async def conflict_error(request: Request, exc: ConflictError) -> JSONResponse:

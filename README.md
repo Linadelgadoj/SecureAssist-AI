@@ -1,6 +1,6 @@
 # SecureAssist AI
 
-Aplicación web en desarrollo para asistencia técnica a instaladores de sistemas de seguridad electrónica. Esta entrega contiene una pantalla mínima de estado y un backend FastAPI con `/api/v1/health`; no implementa el chatbot, autenticación, Supabase ni proveedor de IA.
+Aplicación web en desarrollo para asistencia técnica a instaladores de sistemas de seguridad electrónica. Esta entrega contiene una pantalla mínima de estado y un backend FastAPI con `/api/v1/health`; incluye además inventario para reparaciones y un asistente con modelo local (ver secciones abajo).
 
 ## Requisitos locales
 
@@ -79,6 +79,22 @@ El contenedor crea también la base `secureassist_test`; con `TEST_DATABASE_URL`
 - **Técnico:** rol por defecto al entrar por primera vez. Consulta disponibilidad, clientes, equipos e historial de reparaciones y registra reparaciones.
 
 Un administrador cambia roles o desactiva usuarios con `PATCH /api/v1/users/{id}`; siempre debe quedar al menos un administrador activo.
+
+## Asistente (chatbot con modelo local)
+
+El asistente responde en las conversaciones usando un modelo local de [Ollama](https://ollama.com), sin costo por uso ni envío de datos a terceros:
+
+```powershell
+ollama pull qwen3.5
+ollama serve
+```
+
+Y en `.env`: `LLM_PROVIDER=ollama` (con `none`, la ruta de respuesta devuelve 503). `qwen3.5` es el modelo local probado que usa bien las herramientas; otros modelos (p. ej. `mistral`) tienden a describir la herramienta en lugar de llamarla.
+
+- Tras cada mensaje del técnico, el frontend llama a `POST /api/v1/conversations/{id}/reply`. Si el modelo no está disponible, el mensaje queda guardado y aparece **Pedir respuesta al asistente** para reintentar.
+- El asistente tiene dos herramientas **de solo lectura**: `consultar_inventario` (existencias por ubicación) e `historial_equipo` (reparaciones anteriores de un equipo por serial, marca o cliente). No puede registrar ni modificar nada.
+- Sus instrucciones (`backend/app/application/assistant_prompt.py`) siguen `AGENTS.md` §4: preguntar cuando falta información, no inventar, advertir riesgos eléctricos y pedir confirmación del resultado.
+- El proveedor está detrás del puerto `LanguageModel`; cambiar a OpenAI u otro implica un adaptador nuevo en `app/services`, sin tocar los casos de uso.
 
 ## Inventario para reparaciones
 

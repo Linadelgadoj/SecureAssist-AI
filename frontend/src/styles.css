@@ -338,3 +338,16 @@ select.input { cursor: pointer; }
   .module-header { flex-direction: column; align-items: stretch; }
   .table th:nth-child(2), .table td:nth-child(2) { display: none; }
 }
+
+/* ------------------------------------------------------------------ Respuestas del asistente */
+.message-row--assistant .message-avatar { border-color: rgba(118, 227, 192, .6); color: #09231e; background: var(--mint); font-weight: 700; }
+.message-row--assistant .message-meta strong { color: var(--mint); }
+.message-bubble--assistant { border-color: rgba(118, 227, 192, .18); border-radius: 11px 11px 11px 3px; background: rgba(16, 45, 48, .55); white-space: normal; }
+.message-text > * { margin: 0; }
+.message-text > * + * { margin-top: 9px; }
+.message-text ul, .message-text ol { padding-left: 20px; }
+.message-text li + li { margin-top: 4px; }
+.message-text strong { color: #eef6f7; }
+.message-text code { padding: 1px 5px; border-radius: 4px; color: #c9f5e6; background: rgba(0, 0, 0, .25); font: 12px Consolas, "Courier New", monospace; }
+.message-text hr { height: 1px; border: 0; background: rgba(205, 224, 235, .12); }
+.message-heading { color: #eef6f7; font-weight: 600; }

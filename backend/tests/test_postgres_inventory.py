@@ -221,3 +221,34 @@ def test_inventory_without_database_is_unavailable():
     with TestClient(create_app(make_settings(database_url=""))) as client:
         response = client.get(f"{API}/products", headers=login(client))
     assert response.status_code == 503
+
+
+def test_assistant_equipment_tool_reads_repair_history(actors):
+    import json as _json
+
+    from app.application.assistant_tools import AssistantTools
+    from app.repositories.postgres_inventory import PostgresClientRepository
+
+    client, admin, technician = actors
+    customer = client.post(f"{API}/clients", headers=technician, json={"name": "Edificio Torre Norte"}).json()
+    dvr = client.post(f"{API}/clients/{customer['id']}/equipment", headers=technician,
+                      json={"equipment_type": "NVR", "brand": "Dahua", "serial_number": "NVR-777"}).json()
+    repair = client.post(f"{API}/repairs", headers=technician, json={
+        "client_id": customer["id"], "equipment_id": dvr["id"], "problem_description": "Disco lleno"}).json()
+    client.patch(f"{API}/repairs/{repair['id']}", headers=technician,
+                 json={"solution": "Se configuró sobrescritura", "status": "resolved"})
+
+    async def lookup(query):
+        database = Database(TEST_DATABASE_URL, max_size=1)
+        await database.connect()
+        try:
+            return _json.loads(await AssistantTools(None, PostgresClientRepository(database)).run(
+                "historial_equipo", {"busqueda": query}))
+        finally:
+            await database.close()
+
+    by_serial = asyncio.run(lookup("nvr-777"))
+    assert by_serial["equipos"][0]["cliente"] == "Edificio Torre Norte"
+    assert by_serial["equipos"][0]["reparaciones"][0]["solucion"] == "Se configuró sobrescritura"
+    assert asyncio.run(lookup("torre norte"))["equipos"][0]["serial"] == "NVR-777"
+    assert asyncio.run(lookup("no-existe"))["equipos"] == []

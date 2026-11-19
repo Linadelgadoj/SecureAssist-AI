@@ -24,6 +24,7 @@ from app.repositories.postgres_inventory import (
 )
 from app.repositories.postgres_users import PostgresUserRepository
 from app.services.dev_auth import DevAuthService
+from app.services.ollama_provider import OllamaLanguageModel
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -77,6 +78,8 @@ def create_app(settings: Settings | None = None, auth_service=None) -> FastAPI:
             close = getattr(application.state.auth_service, "aclose", None)
             if close is not None:
                 await close()
+            if application.state.language_model is not None:
+                await application.state.language_model.aclose()
             if database is not None:
                 await database.close()
 
@@ -91,6 +94,10 @@ def create_app(settings: Settings | None = None, auth_service=None) -> FastAPI:
     application.state.settings = settings
     application.state.auth_service = auth_service
     application.state.database = _compose_storage(application, settings)
+    application.state.language_model = (
+        OllamaLanguageModel(settings.ollama_base_url, settings.ollama_model, settings.llm_timeout_seconds)
+        if settings.llm_provider == "ollama" else None
+    )
     if settings.dev_login and auth_service is None:
         if settings.app_env != "development":
             raise ValueError("DEV_LOGIN solo se permite con APP_ENV=development.")

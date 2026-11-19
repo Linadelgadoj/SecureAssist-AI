@@ -26,6 +26,11 @@ class Settings:
     database_url: str = ""
     # Correos que siempre tienen rol administrador (se aplica en cada inicio de sesión).
     admin_emails: frozenset[str] = frozenset()
+    # Asistente: "ollama" (modelo local) o "none" (desactivado: la API responde 503).
+    llm_provider: str = "none"
+    ollama_base_url: str = "http://127.0.0.1:11434"
+    ollama_model: str = "qwen3.5"
+    llm_timeout_seconds: float = 180.0
 
     @property
     def supabase_auth_url(self) -> str:
@@ -92,6 +97,13 @@ def _read_optional_positive_int(name: str) -> int | None:
     return value
 
 
+def _read_llm_provider() -> str:
+    provider = os.getenv("LLM_PROVIDER", "none").strip().lower()
+    if provider not in {"none", "ollama"}:
+        raise ValueError("LLM_PROVIDER debe ser none u ollama.")
+    return provider
+
+
 def get_settings() -> Settings:
     """Read only server-safe settings from the process environment."""
     app_env = os.getenv("APP_ENV", "development").strip().lower()
@@ -122,6 +134,10 @@ def get_settings() -> Settings:
         auth_cookie_max_age_seconds=_read_optional_positive_int("AUTH_COOKIE_MAX_AGE_SECONDS"),
         dev_login=dev_login,
         database_url=os.getenv("DATABASE_URL", "").strip(),
+        llm_provider=_read_llm_provider(),
+        ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").strip().rstrip("/"),
+        ollama_model=os.getenv("OLLAMA_MODEL", "qwen3.5").strip(),
+        llm_timeout_seconds=float(os.getenv("LLM_TIMEOUT_SECONDS", "180")),
         admin_emails=frozenset(
             email.strip().lower() for email in os.getenv("ADMIN_EMAILS", "").split(",") if email.strip()
         ),

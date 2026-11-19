@@ -9,9 +9,12 @@ from __future__ import annotations
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.application.assistant import AssistantService
+from app.application.assistant_tools import AssistantTools
 from app.application.conversations import ConversationService
 from app.application.inventory import CatalogService, ClientService, RepairService
 from app.application.users import UserService
+from app.domain.assistant import AssistantUnavailable
 from app.domain.errors import StorageUnavailable
 from app.domain.ports import AuthProvider
 
@@ -71,3 +74,15 @@ def get_client_service(request: Request) -> ClientService:
 
 def get_repair_service(request: Request) -> RepairService:
     return RepairService(_inventory_repository(request, "repair_repository"))
+
+
+def get_assistant_service(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> AssistantService:
+    state = request.app.state
+    if state.language_model is None:
+        raise AssistantUnavailable("El asistente está desactivado (configura LLM_PROVIDER=ollama).")
+    token = credentials.credentials if credentials else ""
+    tools = AssistantTools(state.catalog_repository, state.client_repository)
+    return AssistantService(state.conversation_repository_factory(token), state.language_model, tools)

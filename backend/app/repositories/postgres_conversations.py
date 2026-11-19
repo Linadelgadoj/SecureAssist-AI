@@ -51,11 +51,18 @@ class PostgresConversationRepository:
         return [dict(row) for row in rows]
 
     async def create_message(self, owner_user_id: str, conversation_id: str, content_text: str) -> Row:
+        return await self._insert_message(owner_user_id, conversation_id, content_text, "installer", "received")
+
+    async def create_assistant_message(self, owner_user_id: str, conversation_id: str, content_text: str) -> Row:
+        return await self._insert_message(owner_user_id, conversation_id, content_text, "assistant", "completed")
+
+    async def _insert_message(self, owner_user_id: str, conversation_id: str, content_text: str,
+                              role: str, processing_state: str) -> Row:
         async with self._db.transaction() as conn:
             row = await conn.fetchrow(
-                "INSERT INTO messages (owner_user_id, conversation_id, role, content_text)"
-                f" VALUES ($1, $2, 'installer', $3) RETURNING {_MESSAGE_COLUMNS}",
-                owner_user_id, conversation_id, content_text,
+                "INSERT INTO messages (owner_user_id, conversation_id, role, content_text, processing_state)"
+                f" VALUES ($1, $2, $3, $4, $5) RETURNING {_MESSAGE_COLUMNS}",
+                owner_user_id, conversation_id, role, content_text, processing_state,
             )
             await conn.execute(
                 "UPDATE conversations SET last_activity_at = $3 WHERE id = $1 AND owner_user_id = $2",

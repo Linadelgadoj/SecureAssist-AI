@@ -314,6 +314,16 @@ class PostgresClientRepository:
                 raise _equipment_conflict(exc) from exc
         return await self.get_equipment(equipment_id) if found else None
 
+    async def search_equipment(self, query: str, limit: int) -> list[Row]:
+        pattern = f"%{query}%"
+        async with self._db.connection() as conn:
+            return _rows(await conn.fetch(
+                f"SELECT {_EQUIPMENT_COLUMNS}, c.name AS client_name FROM installed_equipment e"
+                " JOIN clients c ON c.id = e.client_id"
+                " WHERE e.serial_number ILIKE $1 OR e.brand ILIKE $1 OR e.model ILIKE $1"
+                "    OR e.equipment_type ILIKE $1 OR c.name ILIKE $1"
+                " ORDER BY e.serial_number ILIKE $1 DESC, c.name, e.created_at LIMIT $2", pattern, limit))
+
     async def get_equipment(self, equipment_id: str) -> Row | None:
         async with self._db.connection() as conn:
             equipment = _row(await conn.fetchrow(

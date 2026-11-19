@@ -51,9 +51,16 @@ class InMemoryConversationRepository:
         return [_pick(m, _MESSAGE_FIELDS) for m in rows[offset:offset + limit]]
 
     async def create_message(self, owner_user_id: str, conversation_id: str, content_text: str) -> dict[str, Any]:
+        return self._insert(owner_user_id, conversation_id, content_text, "installer", "received")
+
+    async def create_assistant_message(self, owner_user_id: str, conversation_id: str, content_text: str) -> dict[str, Any]:
+        return self._insert(owner_user_id, conversation_id, content_text, "assistant", "completed")
+
+    def _insert(self, owner_user_id: str, conversation_id: str, content_text: str,
+                role: str, processing_state: str) -> dict[str, Any]:
         now = _now()
         row = {"id": str(uuid4()), "conversation_id": conversation_id, "owner_user_id": owner_user_id,
-               "role": "installer", "content_text": content_text, "processing_state": "received", "created_at": now}
+               "role": role, "content_text": content_text, "processing_state": processing_state, "created_at": now}
         self.messages.append(row)
         conversation = self._find(owner_user_id, conversation_id)
         if conversation:

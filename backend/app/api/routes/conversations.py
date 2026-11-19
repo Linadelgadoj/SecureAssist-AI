@@ -8,9 +8,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 
 from app.api.pagination import decode_cursor, encode_next_cursor
+from app.application.assistant import AssistantService
 from app.application.conversations import ConversationService
 from app.dependencies.auth import get_current_account_id
-from app.dependencies.services import get_conversation_service
+from app.dependencies.services import get_assistant_service, get_conversation_service
 from app.schemas.conversations import (
     ConversationCreate,
     ConversationList,
@@ -82,3 +83,13 @@ async def create_message(
 ):
     row = await service.send_message(owner, str(conversation_id), payload.content_text)
     return MessageResponse.model_validate(row)
+
+
+@router.post("/{conversation_id}/reply", response_model=MessageResponse, status_code=201,
+             summary="Genera la respuesta del asistente al último mensaje del técnico")
+async def reply(
+    conversation_id: UUID,
+    owner: str = Depends(get_current_account_id),
+    assistant: AssistantService = Depends(get_assistant_service),
+):
+    return MessageResponse.model_validate(await assistant.reply(owner, str(conversation_id)))
