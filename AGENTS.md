@@ -21,7 +21,7 @@ La primera versión se concentrará exclusivamente en el chatbot de asistencia t
 - Memoria individual por instalador.
 - Consulta de conocimiento técnico compartido.
 
-El inventario de cámaras, accesorios, grabadores y otros equipos, incluidas consultas de existencias, cantidades y precios, es una etapa futura y no debe desarrollarse hasta recibir autorización expresa.
+**Actualización 2026-11-19 (autorizado por el equipo):** se autoriza el **inventario para reparaciones**: repuestos con existencias por ubicación, movimientos de stock, clientes, equipos instalados e historial de reparaciones, con roles de administrador y técnico. El asistente puede **consultar** ese inventario, pero no modificarlo. Siguen fuera de alcance, y requieren autorización expresa, los precios, compras, ventas, cotizaciones, proveedores y la integración con inventarios externos. Detalle en `docs/architecture/inventario-y-asistente.md`.
 
 ## 4. COMPORTAMIENTO DEL CHATBOT
 
@@ -42,7 +42,7 @@ La arquitectura inicial será un monolito modular y utilizará:
 - **Frontend:** React + TypeScript.
 - **Backend:** Python + FastAPI.
 - **Comunicación:** API REST sobre HTTPS.
-- **Base de datos:** PostgreSQL mediante Supabase.
+- **Base de datos:** PostgreSQL mediante Supabase. Para desarrollo, PostgreSQL local en Docker (`docker-compose.yml`), detrás de las mismas interfaces de repositorio (autorizado el 2026-11-19).
 - **Infraestructura administrada:** Supabase.
 - **Autenticación:** Supabase Auth es la alternativa principal a evaluar.
 - **Fotografías:** Supabase Storage con almacenamiento privado y controles de acceso.
@@ -50,6 +50,8 @@ La arquitectura inicial será un monolito modular y utilizará:
 - **Control de versiones y colaboración:** Git y GitHub.
 
 OpenAI API será el primer proveedor que se evaluará para interpretar texto y fotografías. Se requiere un modelo multimodal. OpenAI es el candidato inicial, pero su selección definitiva dependerá de pruebas técnicas y de la evaluación de costos, calidad y privacidad. Las credenciales de cualquier proveedor de IA deben permanecer exclusivamente en el backend y nunca exponerse al frontend.
+
+**Actualización 2026-11-19 (autorizado por el equipo):** mientras no haya presupuesto para un proveedor de pago, el asistente de texto usa un **modelo local con Ollama (`qwen3.5`)**, sin costo por uso y sin enviar datos a terceros. El proveedor está detrás de la interfaz `LanguageModel`, así que incorporar OpenAI u otro requiere solo un adaptador nuevo. El análisis de fotografías sigue pendiente de un modelo multimodal.
 
 La selección de un proveedor o servicio dentro de estas opciones y cualquier cambio arquitectónico importante deben respetar las reglas de aprobación de este documento.
 
@@ -91,7 +93,7 @@ La confirmación de que una solución funcionó no equivale a autorización para
 - **Etapa 1 — Primera versión del chatbot:** conversaciones en lenguaje natural, fotografías e interpretación multimodal, diagnóstico conversacional, recomendaciones y alternativas, confirmación de resultados, memoria individual y consulta de conocimiento compartido, conforme al consentimiento requerido.
 - **Etapa 2 — Pruebas y validación:** validar los flujos funcionales, la calidad de las respuestas, la privacidad y el aislamiento de datos, y corregir problemas aprobados.
 - **Etapa 3 — Estabilización y publicación:** preparar la integración general y publicación cuando se autorice.
-- **Etapa 4 — Inventario inteligente:** etapa futura; no desarrollar hasta recibir autorización expresa.
+- **Etapa 4 — Inventario inteligente:** el inventario para reparaciones y su consulta desde el asistente se autorizaron y adelantaron el 2026-11-19 (ver §3). Lo comercial (precios, compras, ventas, cotizaciones) sigue sin autorizar.
 - **Etapa 5 — Integraciones futuras:** cualquier integración adicional requiere alcance y autorización específicos.
 
 No avanzar automáticamente a una etapa posterior. La inclusión de fotografías y análisis visual en la Etapa 1 reemplaza la planificación anterior que los ubicaba en una etapa posterior.

@@ -33,8 +33,9 @@ async function readSession(response: Response): Promise<AuthSession> {
   return response.json() as Promise<AuthSession>;
 }
 
-export function beginGoogleSignIn(): void {
-  window.location.assign(apiUrl("/auth/google/start"));
+export function beginGoogleSignIn(loginHint?: string): void {
+  const query = loginHint ? `?${new URLSearchParams({ login_hint: loginHint })}` : "";
+  window.location.assign(apiUrl(`/auth/google/start${query}`));
 }
 
 export function getSession(): Promise<AuthSession> {

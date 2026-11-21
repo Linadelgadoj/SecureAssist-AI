@@ -30,6 +30,8 @@ La primera versión contempla exclusivamente el chatbot de asistencia técnica:
 
 El inventario de cámaras, accesorios, grabadores y otros equipos —incluidas existencias, cantidades y precios— queda para una etapa futura y no se desarrolla en este documento. Otras integraciones futuras requieren alcance y autorización específicos.
 
+> **Actualización 2026-11-19:** el equipo autorizó el inventario para reparaciones (existencias por ubicación, clientes, equipos instalados y reparaciones) y un asistente de texto con modelo local (Ollama) detrás de la interfaz `LanguageModel`; OpenAI sigue siendo el candidato para el análisis multimodal. Precios, compras y ventas siguen fuera de alcance. Ver [inventario-y-asistente.md](inventario-y-asistente.md).
+
 ## 2. ARQUITECTURA GENERAL
 
 ### Monolito modular

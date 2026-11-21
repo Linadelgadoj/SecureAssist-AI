@@ -9,9 +9,9 @@ export interface Conversation {
 export interface ConversationMessage {
   id: string;
   conversation_id: string;
-  role: "installer";
+  role: "installer" | "assistant";
   content_text: string;
-  processing_state: "received";
+  processing_state: "received" | "completed" | "failed";
   created_at: string;
 }
 

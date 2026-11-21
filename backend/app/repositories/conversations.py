@@ -5,13 +5,14 @@ from typing import Any
 import httpx
 
 from app.core.config import Settings
+from app.domain.errors import StorageError, StorageUnavailable
 
 
-class ConversationStoreError(Exception):
+class ConversationStoreError(StorageError):
     pass
 
 
-class ConversationStoreUnavailable(ConversationStoreError):
+class ConversationStoreUnavailable(ConversationStoreError, StorageUnavailable):
     pass
 
 
@@ -59,11 +60,20 @@ class SupabaseConversationRepository:
         })
 
     async def create_message(self, owner_user_id: str, conversation_id: str, content_text: str) -> dict[str, Any]:
+        return await self._insert_message(owner_user_id, conversation_id, content_text, "installer", "received")
+
+    async def create_assistant_message(self, owner_user_id: str, conversation_id: str, content_text: str) -> dict[str, Any]:
+        # Requiere backend/migrations/002_assistant_messages.sql aplicada en Supabase.
+        return await self._insert_message(owner_user_id, conversation_id, content_text, "assistant", "completed")
+
+    async def _insert_message(self, owner_user_id: str, conversation_id: str, content_text: str,
+                              role: str, processing_state: str) -> dict[str, Any]:
         rows = await self._request("POST", "messages", json={
             "owner_user_id": owner_user_id,
             "conversation_id": conversation_id,
-            "role": "installer",
+            "role": role,
             "content_text": content_text,
+            "processing_state": processing_state,
         }, prefer="return=representation")
         if not rows:
             raise ConversationStoreError("Message insert returned no row")

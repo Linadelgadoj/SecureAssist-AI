@@ -31,6 +31,8 @@ El MVP comprende autenticación de instaladores, conversación en lenguaje natur
 
 Quedan fuera el catálogo comercial, inventario de equipos, existencias, cantidades, precios, cotizaciones, compras, ventas, proveedores e integración con inventarios externos. No se especifica su diseño futuro.
 
+> **Actualización 2026-11-19:** se autorizó y se implementó el inventario para reparaciones: existencias por ubicación, movimientos, clientes, equipos instalados e historial de reparaciones, con roles de administrador y técnico. Siguen excluidos el catálogo comercial, los precios, las cotizaciones, las compras, las ventas, los proveedores y los inventarios externos. Ver [inventario-y-asistente.md](../architecture/inventario-y-asistente.md).
+
 ## 3. Requisitos funcionales
 
 En cada ficha, «aceptación» contiene comprobaciones observables. Los límites marcados como propuestos son valores iniciales que requieren validación antes de fijarse para producción.
@@ -607,7 +609,7 @@ Los valores numéricos propuestos requieren validación; no son compromisos de s
 | RN-018 | Rechazo o falta de respuesta mantiene privado el recurso. |
 | RN-019 | Revocación retira de futuras consultas; no afirmar borrado de copias/backups sin verificarlo. |
 | RN-020 | Error al guardar confirmación/permiso impide cambiar estado o compartir como exitoso. |
-| RN-021 | Inventario, catálogo, ventas, compras, precios y existencias quedan fuera del MVP. |
+| RN-021 | Catálogo comercial, ventas, compras y precios quedan fuera del MVP. El inventario para reparaciones (existencias, equipos instalados, reparaciones) se autorizó el 2026-11-19. |
 
 ## 6. Flujos funcionales obligatorios
 
@@ -686,6 +688,8 @@ Este documento no define contratos API, tablas, migraciones ni diseño físico; 
 
 No se incluyen catálogo comercial, inventario de cámaras/DVR/NVR/accesorios, cantidades, existencias, precios, cotizaciones, pedidos, compras, ventas, proveedores ni conexión con inventarios externos. Ningún requisito de este documento habilita estas funciones. El chatbot debe mantener responsabilidades modulares y no depender de un catálogo o inventario para operar; una integración futura requerirá alcance y autorización propios, sin diseñar aquí ese módulo.
 
+> **Actualización 2026-11-19:** el inventario para reparaciones se diseñó como módulo propio; el chatbot solo lo consulta mediante herramientas de lectura y sigue funcionando si el inventario no está disponible. Ver [inventario-y-asistente.md](../architecture/inventario-y-asistente.md).
+
 ## 9. Decisiones pendientes
 
 Las recomendaciones son propuestas, no decisiones aprobadas.
@@ -717,7 +721,7 @@ Las recomendaciones son propuestas, no decisiones aprobadas.
 - **Problemas distintos:** equipos, acciones y resultados no se mezclan sin confirmar relación.
 - **Riesgo:** factory reset y cambios de impacto requieren aviso, equipo/documentación, respaldo/recuperación y aceptación; si no se valida, no se guía.
 - **Tecnología:** mantiene React + TypeScript, Python + FastAPI, REST/HTTPS, PostgreSQL/Supabase, Storage privado, Supabase Auth como alternativa principal a evaluar y OpenAI como candidato inicial.
-- **Inventario:** excluido.
+- **Inventario:** excluido en la versión original; el inventario para reparaciones se autorizó el 2026-11-19 (ver `docs/architecture/inventario-y-asistente.md`). Lo comercial sigue excluido.
 - **Diferencias documentales:** no se encontró conflicto material entre AGENTS.md y los documentos de arquitectura. Candidatos y pendientes se mantienen expresamente como tales.
 - **No se define:** endpoints, contratos, esquema físico, migraciones ni políticas de retención aún no aprobadas.
 

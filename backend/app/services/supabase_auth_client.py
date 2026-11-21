@@ -17,6 +17,9 @@ class SupabaseAuthClient:
         self.publishable_key = publishable_key
         self.client = client or httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=4.0))
 
+    async def aclose(self) -> None:
+        await self.client.aclose()
+
     def authorization_url(self, redirect_to: str, challenge: str) -> str:
         query = urlencode({
             "provider": "google",

@@ -1,0 +1,24 @@
+# PostgreSQL local para desarrollo. Uso: docker compose up -d db
+# Lee POSTGRES_PASSWORD del archivo .env de la raíz (ver .env.example).
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: secureassist
+      POSTGRES_USER: secureassist
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+    ports:
+      # Solo accesible desde este equipo.
+      - "127.0.0.1:${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/migrations/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U secureassist -d secureassist"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

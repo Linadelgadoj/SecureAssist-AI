@@ -21,7 +21,7 @@ class FakeVerifier:
         owners = {"owner-token": OWNER_ID, "other-token": OTHER_OWNER_ID}
         if token not in owners:
             raise TokenValidationError("invalid token")
-        return {"sub": owners[token]}
+        return {"sub": owners[token], "email": f"{owners[token]}@example.com"}
 
 
 class FakeAuthService:

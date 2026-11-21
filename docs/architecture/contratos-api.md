@@ -10,6 +10,8 @@ Este documento define la interfaz REST entre React + TypeScript y el backend Fas
 
 No se crean aquí endpoints de inventario, roles administrativos, servicios separados, tablas, migraciones ni mecanismos de transporte no aprobados. Los nombres de ruta, esquemas y flujos marcados como propuesta deberán revisarse antes de convertirse en un contrato congelado. Las operaciones del proveedor de identidad se distinguen de las rutas propias de FastAPI.
 
+> **Actualización 2026-11-19:** se agregaron las rutas de inventario, de roles (`/me`, `/users`) y `POST /conversations/{id}/reply` para el asistente; se documentan aparte. Las rutas de este documento no cambian. Ver [inventario-y-asistente.md](inventario-y-asistente.md).
+
 ## 2. Convenciones comunes
 
 ### 2.1 Transporte, URL y representación
@@ -548,6 +550,8 @@ Autenticación del proveedor no se cuenta como ruta FastAPI. Rutas API-001–030
 | RF-044–050 | API-008, API-012, API-017 y formato común de error | Persistencia, red, IA, Storage y manejo de reintento. |
 
 No se incluyen rutas de inventario, ventas, proveedores, precios, catálogo ni existencias.
+
+> **Actualización 2026-11-19:** las rutas de inventario para reparaciones ya existen (sin ventas, proveedores ni precios). Ver [inventario-y-asistente.md](inventario-y-asistente.md).
 
 ## 15. Entregas sugeridas para implementación
 

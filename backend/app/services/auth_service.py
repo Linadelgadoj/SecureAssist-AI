@@ -4,6 +4,7 @@ import base64
 import hashlib
 import hmac
 import secrets
+from contextlib import contextmanager
 from urllib.parse import urlencode
 
 from pydantic import ValidationError
@@ -23,6 +24,23 @@ class AuthUnavailable(Exception):
     pass
 
 
+@contextmanager
+def _translate_provider_errors():
+    """Convierte fallos del proveedor en AuthRejected (credencial inválida) o AuthUnavailable."""
+    try:
+        yield
+    except AuthRejected:
+        raise
+    except TokenVerificationUnavailable as exc:
+        raise AuthUnavailable() from exc
+    except TokenValidationError as exc:
+        raise AuthRejected() from exc
+    except SupabaseAuthError as exc:
+        if exc.status in {400, 401, 403}:
+            raise AuthRejected() from exc
+        raise AuthUnavailable() from exc
+
+
 class AuthService:
     def __init__(self, settings: Settings, client: SupabaseAuthClient | None = None, transactions: OAuthTransactionStore | None = None, verifier=None):
         self.settings = settings
@@ -30,7 +48,8 @@ class AuthService:
         self.transactions = transactions or OAuthTransactionStore()
         self.verifier = verifier or SupabaseJWTVerifier(settings.supabase_jwks_url, settings.supabase_jwt_issuer)
 
-    def start(self) -> tuple[str, str]:
+    def start(self, login_hint: str | None = None) -> tuple[str, str]:
+        # login_hint solo lo usa el login de prueba; Supabase/Google lo ignoran aquí.
         self.settings.require_auth_configuration()
         verifier = secrets.token_urlsafe(64)
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
@@ -45,7 +64,7 @@ class AuthService:
         return self.transactions.consume(provided_state)
 
     async def exchange_and_validate(self, code: str, verifier: str) -> tuple[str, str, AuthUser, int]:
-        try:
+        with _translate_provider_errors():
             session = await self.client.exchange_code(code, verifier)
             access, refresh, expires = self._session_tokens(session)
             self.verifier.verify(access)
@@ -55,34 +74,14 @@ class AuthService:
             if not isinstance(session_user, dict) or user.id != session_user.get("id"):
                 raise AuthRejected()
             return access, refresh, user, expires
-        except AuthRejected:
-            raise
-        except TokenVerificationUnavailable as exc:
-            raise AuthUnavailable() from exc
-        except TokenValidationError as exc:
-            raise AuthRejected() from exc
-        except SupabaseAuthError as exc:
-            if exc.status in {400, 401, 403}:
-                raise AuthRejected() from exc
-            raise AuthUnavailable() from exc
 
     async def renew(self, refresh_token: str) -> tuple[str, str, AuthUser, int]:
-        try:
+        with _translate_provider_errors():
             session = await self.client.refresh(refresh_token)
             access, refresh, expires = self._session_tokens(session)
             self.verifier.verify(access)
             user = self._validate_user(session.get("user") or await self.client.user(access))
             return access, refresh, user, expires
-        except AuthRejected:
-            raise
-        except TokenVerificationUnavailable as exc:
-            raise AuthUnavailable() from exc
-        except TokenValidationError as exc:
-            raise AuthRejected() from exc
-        except SupabaseAuthError as exc:
-            if exc.status in {400, 401, 403}:
-                raise AuthRejected() from exc
-            raise AuthUnavailable() from exc
 
     async def logout(self, refresh_token: str | None) -> None:
         if not refresh_token:
@@ -93,6 +92,9 @@ class AuthService:
         except (AuthRejected, AuthUnavailable, SupabaseAuthError):
             # Local logout is unconditional; provider revocation is best-effort.
             return
+
+    async def aclose(self) -> None:
+        await self.client.aclose()
 
     @staticmethod
     def _session_tokens(session: dict) -> tuple[str, str, int]:

@@ -39,3 +39,20 @@ test("new conversations and installer messages use only the supported payload", 
     assert.match(requests[1].url, /\/conversations\/conversation-1\/messages$/);
   } finally { globalThis.fetch = originalFetch; }
 });
+
+test("assistant replies are requested with a long timeout and no body", async () => {
+  const originalFetch = globalThis.fetch;
+  let request;
+  globalThis.fetch = async (url, init) => {
+    request = { url, init };
+    return new Response(JSON.stringify({ id: "m2", role: "assistant" }), { status: 201 });
+  };
+  try {
+    const reply = await api.requestReply("token", "conversation-1");
+    assert.equal(reply.role, "assistant");
+    assert.match(request.url, /\/conversations\/conversation-1\/reply$/);
+    assert.equal(request.init.method, "POST");
+    assert.equal(request.init.body, undefined);
+    assert.ok(request.init.signal instanceof AbortSignal);
+  } finally { globalThis.fetch = originalFetch; }
+});

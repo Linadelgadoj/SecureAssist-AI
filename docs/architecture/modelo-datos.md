@@ -10,6 +10,8 @@ Este modelo representa la información necesaria para autenticar instaladores, c
 
 No modela inventario comercial, catálogo, precios, existencias, compras, ventas, proveedores ni cotizaciones. Los equipos descritos son menciones contextuales de instalaciones y diagnósticos, no productos de inventario.
 
+> **Actualización 2026-11-19:** las tablas del inventario para reparaciones (`products`, `stock_locations`, `stock_levels`, `stock_movements`, `clients`, `installed_equipment`, `repairs`) y `app_users` con roles se documentan aparte. Las entidades de este documento no cambian. Ver [inventario-y-asistente.md](inventario-y-asistente.md).
+
 La arquitectura sigue siendo un monolito modular con React + TypeScript, Python + FastAPI, REST sobre HTTPS, PostgreSQL mediante Supabase, Supabase Auth como alternativa principal a evaluar y Supabase Storage privado. OpenAI API sigue siendo proveedor inicial a evaluar, no selección definitiva. Este documento no crea endpoints, migraciones, políticas ejecutables ni SQL.
 
 ## 2. Principios del modelo
@@ -834,6 +836,8 @@ Se recomienda definir antes de producción un proceso de cierre de cuenta con de
 | Errores RF-044–050 | estado de mensajes/archivos y código de error seguro |
 
 No se crean entidades de inventario ni catálogo. EQUIPMENT_MENTIONS y SHARED_CASE_EQUIPMENT describen equipos de una instalación para diagnóstico y referencia contextual; no manejan existencias, SKU, precio, compra ni disponibilidad.
+
+> **Actualización 2026-11-19:** las existencias y la disponibilidad viven ahora en el módulo de inventario; siguen sin precios ni compras. Ver [inventario-y-asistente.md](inventario-y-asistente.md).
 
 ## 12. Decisiones aprobadas, propuestas y pendientes
 

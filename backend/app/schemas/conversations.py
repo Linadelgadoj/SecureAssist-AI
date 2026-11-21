@@ -54,9 +54,9 @@ class MessageCreate(BaseModel):
 class MessageResponse(BaseModel):
     id: UUID
     conversation_id: UUID
-    role: Literal["installer"]
+    role: Literal["installer", "assistant"]
     content_text: str
-    processing_state: Literal["received"]
+    processing_state: Literal["received", "completed", "failed"]
     created_at: datetime
 
 

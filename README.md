@@ -1,6 +1,57 @@
 # SecureAssist AI
 
-Aplicación web en desarrollo para asistencia técnica a instaladores de sistemas de seguridad electrónica. Esta entrega contiene una pantalla mínima de estado y un backend FastAPI con `/api/v1/health`; no implementa el chatbot, autenticación, Supabase ni proveedor de IA.
+Aplicación web en desarrollo para asistencia técnica a instaladores de sistemas de seguridad electrónica. Incluye historial de conversaciones con un asistente técnico (modelo local con Ollama), inventario para reparaciones (existencias por ubicación, clientes, equipos instalados y reparaciones) y roles de administrador y técnico. El diseño de estas partes y las decisiones tomadas están en `docs/architecture/inventario-y-asistente.md`.
+
+## Inicio rápido (desarrollo local en Windows)
+
+Necesitas tener instalados **Python 3.10+**, **Node.js 18+**, **Docker Desktop** (en ejecución) y **[Ollama](https://ollama.com/download)**. Ejecuta los comandos en PowerShell, desde la carpeta del proyecto.
+
+```powershell
+# 1. Configuración: crea .env y frontend\.env.local listos para desarrollo
+python scripts\crear_env_desarrollo.py
+
+# 2. Base de datos PostgreSQL en Docker
+docker compose up -d db
+
+# 3. Backend: entorno virtual y dependencias
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r backend\requirements.txt
+
+# 4. Modelo del asistente (descarga de varios GB, solo la primera vez)
+ollama pull qwen3.5
+
+# 5. Datos de demostración (productos, clientes y reparaciones de ejemplo)
+cd backend; python -m app.db.seed_demo; cd ..
+
+# 6. Iniciar el backend (deja esta terminal abierta)
+uvicorn app.main:app --app-dir backend --env-file .env --reload --host localhost --port 8000
+```
+
+En **otra terminal**:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Abre `http://localhost:5173`:
+
+- **Continuar con Google** entra como administrador (`dev@localhost`).
+- **Entrar como técnico (prueba local)** entra como técnico (`tecnico@localhost`).
+
+Si algo falla:
+
+- **«El asistente está desactivado»:** en `.env` debe decir `LLM_PROVIDER=ollama`. Reinicia el backend después de cambiarlo.
+- **«No se pudo conectar con el modelo local (Ollama)»:** abre la aplicación Ollama o ejecuta `ollama serve`.
+- **Entras pero no ves las opciones de administrador:** en `.env` debe decir `ADMIN_EMAILS=dev@localhost`.
+- **El inventario responde «no está disponible»:** comprueba que Docker Desktop esté abierto y que `docker compose ps` muestre `db` como `healthy`.
+- **Docker no arranca («Virtual Machine Platform is not enabled»):** activa la característica de Windows *Plataforma de máquina virtual* y reinicia el equipo.
+- **PowerShell no deja activar el entorno virtual:** ejecuta `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` en esa terminal.
+- **El asistente tarda mucho:** el modelo corre en tu equipo. Sin una tarjeta gráfica dedicada puede tardar decenas de segundos por respuesta.
+
+Las secciones siguientes explican cada parte con más detalle.
 
 ## Requisitos locales
 
@@ -60,6 +111,57 @@ La pantalla muestra conectado únicamente tras recibir y validar `status: "ok"` 
 ## Configuración
 
 `.env.example` contiene valores de ejemplo y no credenciales. Vite solo lee `VITE_API_BASE_URL`; nunca agregues credenciales a variables `VITE_*`.
+
+## Base de datos local (PostgreSQL en Docker)
+
+Requiere Docker Desktop. Desde la raíz, con `POSTGRES_PASSWORD` y `DATABASE_URL` definidos en `.env` (ver `.env.example`):
+
+```powershell
+docker compose up -d db
+```
+
+El backend aplica las migraciones de `backend\migrations\postgres` al arrancar (también se pueden aplicar con `python -m app.db.migrate` desde `backend`). Si `DATABASE_URL` está vacío, se usa Supabase o, con `DEV_LOGIN=true`, memoria. Usa `127.0.0.1` y no `localhost` en la URL: en Windows `localhost` prueba primero IPv6 y cada conexión tarda segundos.
+
+El contenedor crea también la base `secureassist_test`; con `TEST_DATABASE_URL` definido, `pytest` ejecuta además las pruebas contra PostgreSQL (si no, las omite).
+
+### Roles
+
+- **Administrador:** gestiona catálogo, existencias, ubicaciones y usuarios. Los correos de `ADMIN_EMAILS` siempre son administradores.
+- **Técnico:** rol por defecto al entrar por primera vez. Consulta disponibilidad, clientes, equipos e historial de reparaciones y registra reparaciones.
+
+Un administrador cambia roles o desactiva usuarios con `PATCH /api/v1/users/{id}`; siempre debe quedar al menos un administrador activo.
+
+## Asistente (chatbot con modelo local)
+
+El asistente responde en las conversaciones usando un modelo local de [Ollama](https://ollama.com), sin costo por uso ni envío de datos a terceros:
+
+```powershell
+ollama pull qwen3.5
+ollama serve
+```
+
+Y en `.env`: `LLM_PROVIDER=ollama` (con `none`, la ruta de respuesta devuelve 503). `qwen3.5` es el modelo local probado que usa bien las herramientas; otros modelos (p. ej. `mistral`) tienden a describir la herramienta en lugar de llamarla.
+
+- Tras cada mensaje del técnico, el frontend llama a `POST /api/v1/conversations/{id}/reply`. Si el modelo no está disponible, el mensaje queda guardado y aparece **Pedir respuesta al asistente** para reintentar.
+- El asistente tiene dos herramientas **de solo lectura**: `consultar_inventario` (existencias por ubicación) e `historial_equipo` (reparaciones anteriores de un equipo por serial, marca o cliente). No puede registrar ni modificar nada.
+- Sus instrucciones (`backend/app/application/assistant_prompt.py`) siguen `AGENTS.md` §4: preguntar cuando falta información, no inventar, advertir riesgos eléctricos y pedir confirmación del resultado.
+- El proveedor está detrás del puerto `LanguageModel`; cambiar a OpenAI u otro implica un adaptador nuevo en `app/services`, sin tocar los casos de uso.
+
+## Inventario para reparaciones
+
+Requiere la base de datos local (sin `DATABASE_URL` sus rutas responden 503). En la aplicación aparecen las secciones **Inventario**, **Clientes**, **Reparaciones** y, para administradores, **Usuarios**.
+
+- **Inventario:** productos con existencias por ubicación (bodegas y vehículos), alerta de bajo stock y últimos movimientos. El administrador crea productos y ubicaciones y registra entradas, salidas, ajustes por conteo físico y traslados.
+- **Clientes:** clientes y equipos instalados (marca, modelo, serial, ubicación en el sitio) con el historial de reparaciones de cada equipo.
+- **Reparaciones:** el técnico abre una reparación, registra diagnóstico y solución, y agrega los repuestos usados, que se descuentan del stock. Al resolverla, el equipo vuelve a «Operativo».
+
+Toda salida de stock se valida en la base de datos dentro de una transacción: dos técnicos no pueden consumir la misma última unidad. Cada cambio de existencia queda en `stock_movements` con su autor.
+
+La API completa está documentada en `http://localhost:8000/docs` (etiqueta *inventory*).
+
+## Login de prueba local (sin Supabase)
+
+Para probar la interfaz sin credenciales de Google/Supabase, pon `DEV_LOGIN=true` en `.env` (requiere `APP_ENV=development`) y reinicia el backend. El botón **Continuar con Google** entra directamente como `dev@localhost` (en desarrollo, el botón **Entrar como técnico (prueba local)** usa `tecnico@localhost`) y, sin `DATABASE_URL`, las conversaciones se guardan en memoria y se pierden al reiniciar el backend. El backend se niega a arrancar con `DEV_LOGIN=true` fuera de desarrollo. Para usar el login real, vuelve a `DEV_LOGIN=false`.
 
 ## Acceso con Google y Supabase Auth
 
